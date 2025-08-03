@@ -1,0 +1,227 @@
+- Correct Usage of fuse() in FreeCAD-
+    When performing a union (boolean fuse) of multiple shapes in FreeCAD, always use the iterative .fuse() method on Part objects instead of Part.Union().
+
+    Correct Approach:
+
+    fan_final_shape = all_parts_to_fuse[0]  # Start with the first shape  
+    for shape in all_parts_to_fuse[1:]:     # Iterate over remaining shapes  
+        fan_final_shape = fan_final_shape.fuse(shape)  # Fuse one by one  
+    Avoid:
+
+    fan_final_shape = Part.Union(all_parts_to_fuse)  # Incorrect method  
+
+
+- When applying a Placement to a FreeCAD shape (like a Part.Solid or Part.Shape), do not use .Placed(placement) — this method does not exist.
+Instead, use .copy() and assign the Placement directly, like this:
+
+    shape = Part.makeBox(10, 10, 10)
+    placed_shape = shape.copy()
+    placed_shape.Placement = Placement(Vector(x, y, z), Rotation(Vector(0,0,1), angle))
+    Always use .copy() to avoid modifying the original shape directly, and set Placement as an attribute on the copied shape.
+
+
+- Whenever you are asked to make a fastner including nut bolt and screw, you need to make a similar code as the one given below. you have the rag in your context window from where you must write the necessary function of calculating dimensions from screw_maker.py. You need to then make a dummy function for the variables of the screw as asked-
+
+    from screw_maker import *
+
+    try:
+        import FreeCADGui
+        GUI_AVAILABLE = True
+    except ImportError:
+        GUI_AVAILABLE = False
+
+
+
+    def makeAllMetalFlangedLockNut(self, fa):
+        """Creates a distorted thread lock nut with a flange
+        Supported types:
+        - ISO 7044 all metal lock nuts with flange
+        - ISO 12126 all metal flanged lock nuts with fine pitch thread
+        """
+        dia = self.getDia(fa.calc_diam, True)
+        if fa.baseType in ["ISO7044", "ISO12126"]:
+            P, c, _, _, dc, _, _, h, _, m_min, _, s, _, _ = fa.dimTable
+            m_w = m_min
+        else:
+            raise NotImplementedError(f"Unknown fastener type: {fa.Type}")
+        # main hexagonal body of the nut
+        shape = self.makeHexPrism(s, h)
+        # flange of the hex
+        fm = FSFaceMaker()
+        fm.AddPoint((1.05 * dia + s) / 4, 0.0)
+        fm.AddPoint((dc + sqrt3 * c) / 2, 0.0)
+        fm.AddPoint((dc - c) / 2, 0.0)
+        fm.AddArc2(0, c / 2, 150)
+        fm.AddPoint(
+            (1.05 * dia + s) / 4,
+            sqrt3
+            / 3
+            * ((dc - c) / 2 + c / (4 - 2 * sqrt3) - (1.05 * dia + s) / 4),
+        )
+        flange = self.RevolveZ(fm.GetFace())
+        shape = shape.fuse(flange).removeSplitter()
+        # internal bore
+        fm.Reset()
+        id = self.GetInnerThreadMinDiameter(dia, P, 0.0)
+        bore_cham_ht = (dia * 1.05 - id) / 2 * tan15
+        fm.AddPoint(0.0, 0.0)
+        fm.AddPoint(dia * 1.05 / 2, 0.0)
+        fm.AddPoint(id / 2, bore_cham_ht)
+        fm.AddPoint(id / 2, h - bore_cham_ht)
+        fm.AddPoint(dia * 1.05 / 2, h)
+        fm.AddPoint(0.0, h)
+        bore_cutter = self.RevolveZ(fm.GetFace())
+        shape = shape.cut(bore_cutter)
+        # outer chamfer on the hex
+        fm.Reset()
+        fm.AddPoint((s / sqrt3 + 1.05 * dia / 2) / 2, h)
+        fm.AddPoint(s / sqrt3, h)
+        fm.AddPoint(s / sqrt3, m_w)
+        top_cham_cutter = self.RevolveZ(fm.GetFace())
+        shape = shape.cut(top_cham_cutter)
+        # add modelled threads if needed
+        if fa.Thread:
+            thread_cutter = self.CreateInnerThreadCutter(dia, P, h + P)
+            shape = shape.cut(thread_cutter)
+        return shape
+
+
+
+    if __name__ == "__main__":
+        import sys
+        sys.path.append(r"C:\Users\yasin\Desktop\Code\text2cad_trial")
+        import screw_maker as sm
+        import FreeCAD as App, Part
+
+        s = sm.Screw()
+
+        class DummyFA:
+            baseType = "ISO7044"
+            Type = "ISO7044"
+            calc_diam = "M10"
+            Diameter = "M10"
+            Thread = True
+            LeftHanded = False
+            dimTable = [1.5, 0.5, 0, 0, 17.5, 0, 0, 8.0, 0, 7.5, 0, 15, 0, 0]
+
+        fa = DummyFA()
+        shape = makeAllMetalFlangedLockNut(s, fa)
+
+        doc = App.newDocument("AutoNut")
+        obj = doc.addObject("Part::Feature", "AutoFlangedNut")
+        obj.Shape = shape
+        doc.recompute()
+
+        print("Flanged lock nut generated successfully.")
+
+    if GUI_AVAILABLE:
+        # FreeCADGui.showMainWindow()
+        FreeCADGui.activeDocument().activeView().viewAxometric()
+        FreeCADGui.SendMsgToActiveView("ViewFit")
+
+
+- Good example of a make a flange of OD 100mm, bore size as 50mm, thickness 7.5mm. the height of the middle hollow neck must be 15mm. make 6 m12 holes at PCD 75mm is:
+        import FreeCAD as App
+        import FreeCADGui as Gui
+        from FreeCAD import Vector
+        import math
+
+        def createFlangeAssembly():
+            doc = App.newDocument("Flange")
+
+            # === Parameters ===
+            FLANGE_OUTER_DIAMETER = 100.0
+            FLANGE_THICKNESS = 7.5
+            BORE_INNER_DIAMETER = 50.0
+            NECK_HEIGHT = 15.0
+            NECK_OUTER_DIAMETER = 60.0
+            NUM_BOLT_HOLES = 6
+            BOLT_HOLE_DIAMETER = 12.0
+            PCD = 75.0
+
+            total_height = FLANGE_THICKNESS + NECK_HEIGHT
+
+            # === 1. Create flange base ===
+            flange = doc.addObject("Part::Cylinder", "Flange")
+            flange.Radius = FLANGE_OUTER_DIAMETER / 2
+            flange.Height = FLANGE_THICKNESS
+
+            # === 2. Cut central bore from flange ===
+            bore = doc.addObject("Part::Cylinder", "CentralBore")
+            bore.Radius = BORE_INNER_DIAMETER / 2
+            bore.Height = FLANGE_THICKNESS
+            bore_cut = doc.addObject("Part::Cut", "FlangeWithBore")
+            bore_cut.Base = flange
+            bore_cut.Tool = bore
+
+            # === 3. Create neck ===
+            neck_outer = doc.addObject("Part::Cylinder", "NeckOuter")
+            neck_outer.Radius = NECK_OUTER_DIAMETER / 2
+            neck_outer.Height = NECK_HEIGHT
+            neck_outer.Placement.Base = Vector(0, 0, FLANGE_THICKNESS)
+
+            neck_inner = doc.addObject("Part::Cylinder", "NeckInner")
+            neck_inner.Radius = BORE_INNER_DIAMETER / 2
+            neck_inner.Height = NECK_HEIGHT
+            neck_inner.Placement.Base = Vector(0, 0, FLANGE_THICKNESS)
+
+            neck_hollow = doc.addObject("Part::Cut", "HollowNeck")
+            neck_hollow.Base = neck_outer
+            neck_hollow.Tool = neck_inner
+
+            # === 4. Fuse flange (with central hole) and neck ===
+            fused = doc.addObject("Part::Fuse", "FlangeAndNeck")
+            fused.Base = bore_cut
+            fused.Tool = neck_hollow
+
+            # === 5. Cut bolt holes sequentially ===
+            current_shape = fused
+            bolt_radius = BOLT_HOLE_DIAMETER / 2
+            bolt_circle_radius = PCD / 2
+
+            for i in range(NUM_BOLT_HOLES):
+                angle_deg = 360 * i / NUM_BOLT_HOLES
+                angle_rad = math.radians(angle_deg)
+                x = bolt_circle_radius * math.cos(angle_rad)
+                y = bolt_circle_radius * math.sin(angle_rad)
+
+                hole = doc.addObject("Part::Cylinder", f"BoltHole_{i+1:02d}")
+                hole.Radius = bolt_radius
+                hole.Height = total_height
+                hole.Placement.Base = Vector(x, y, 0)
+
+                cut = doc.addObject("Part::Cut", f"Cut_Bolt_{i+1:02d}")
+                cut.Base = current_shape
+                cut.Tool = hole
+                current_shape = cut  # update for next iteration
+
+            # === 6. Final result ===
+        
+
+            # Recompute and fit view
+            doc.recompute()
+            Gui.activeDocument().activeView().viewAxometric()
+            Gui.SendMsgToActiveView("ViewFit")
+
+            return doc
+
+        if __name__ == "__main__":
+            createFlangeAssembly()
+
+    use this template whenever asked to make a flange
+
+- Use material only when specified by user. An example of using material is-
+                
+        view_obj = final_obj.ViewObject
+        view_obj.ShapeColor = (0.8, 0.8, 0.85)      # Light grey-blue tone
+        view_obj.DiffuseColor = [(0.8, 0.8, 0.85)]  # Consistent color across faces
+        view_obj.Transparency = 0  
+
+        material_obj = doc.addObject("App::MaterialObject", "Material")
+        material_obj.Material = {
+            'Name': 'Stainless steel',
+            'Density': '8000 kg/m^3',
+            'YoungsModulus': '200000 MPa',
+            'PoissonRatio': '0.3'
+        }
+        material_obj.Label = "StainlessSteelMaterial"

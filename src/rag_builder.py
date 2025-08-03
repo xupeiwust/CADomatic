@@ -1,5 +1,3 @@
-# src/rag_builder.py
-
 import os
 import requests
 from bs4 import BeautifulSoup
@@ -16,10 +14,15 @@ load_dotenv()
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
 # --- Step 2: Crawler ---
-BASE_URL = "https://wiki.freecad.org/Power_users_hub"
-DOMAIN = "https://wiki.freecad.org"
+BASE_URL_WIKI = "https://wiki.freecad.org/Power_users_hub"
+BASE_URL_GITHUB = "https://github.com/shaise/FreeCAD_FastenersWB"
 
-# List of language identifiers to exclude
+DOMAIN_WHITELIST = [
+    "https://wiki.freecad.org",
+    "https://github.com/shaise"
+]
+
+# List of language identifiers to exclude (only for wiki)
 LANG_IDENTIFIERS = [
     "/id", "/de", "/tr", "/es", "/fr", "/hr", "/it", "/pl",
     "/pt", "/pt-br", "/ro", "/fi", "/sv", "/cs", "/ru", "/zh-cn",
@@ -28,14 +31,19 @@ LANG_IDENTIFIERS = [
 
 def is_excluded_url(url):
     url_lower = url.lower()
+
+    # Apply language filters only to FreeCAD wiki URLs
+    if "wiki.freecad.org" in url_lower:
+        if any(lang in url_lower for lang in LANG_IDENTIFIERS):
+            return True
+
     return (
-        any(lang in url_lower for lang in LANG_IDENTIFIERS) or
         ".jpg" in url_lower or
         ".png" in url_lower or
         "edit&section" in url_lower
     )
 
-def crawl_wiki(start_url, max_pages=1200):
+def crawl_wiki(start_url, max_pages):
     visited = set()
     to_visit = [start_url]
     pages = []
@@ -59,18 +67,22 @@ def crawl_wiki(start_url, max_pages=1200):
 
             # Queue internal links
             for a in soup.find_all("a", href=True):
-                full = urljoin(DOMAIN, a["href"])
-                if full.startswith(DOMAIN) and full not in visited and not is_excluded_url(full):
-                    to_visit.append(full)
+                full = urljoin(url, a["href"])
+                if any(full.startswith(domain) for domain in DOMAIN_WHITELIST):
+                    if full not in visited and not is_excluded_url(full):
+                        to_visit.append(full)
         except Exception as e:
             print(f"Error fetching {url}: {e}")
 
-    print(f"Crawled {len(pages)} pages")
+    print(f"Crawled {len(pages)} pages from {start_url}")
     return pages
 
 # --- Step 3: RAG Build ---
 def build_vectorstore():
-    pages = crawl_wiki(BASE_URL, max_pages=1000)
+    wiki_pages = crawl_wiki(BASE_URL_WIKI, max_pages=2000)  # Uncomment if you want both
+    github_pages = crawl_wiki(BASE_URL_GITHUB, max_pages=450)
+    pages = wiki_pages + github_pages
+
     if not pages:
         print("No pages crawled. Exiting.")
         return
