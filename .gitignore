@@ -205,9 +205,12 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+<<<<<<< HEAD
 
 /vectorstore/
 
 # Ignore FAISS and pickle index files
 /vectorstore/index.faiss
 /vectorstore/index.pkl
+=======
+>>>>>>> eb18b58eb3dc22a6c926d1ac6a67c3797a546658

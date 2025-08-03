@@ -1,11 +1,15 @@
 import os
+<<<<<<< HEAD
 from pathlib import Path
 from huggingface_hub import hf_hub_download
+=======
+>>>>>>> eb18b58eb3dc22a6c926d1ac6a67c3797a546658
 from langchain_community.vectorstores import FAISS
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from dotenv import load_dotenv
 import google.generativeai as genai
 
+<<<<<<< HEAD
 # Load API key
 load_dotenv()
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
@@ -28,6 +32,21 @@ vectorstore = FAISS.load_local(str(download_dir), embeddings=embedding, allow_da
 retriever = vectorstore.as_retriever(search_kwargs={"k": 40})
 
 # Gemini 2.5 Flash
+=======
+load_dotenv()
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+
+src_path = os.path.dirname(os.path.abspath(__file__))
+root_dir_path = os.path.dirname(src_path)
+vectorstore_path = os.path.join(root_dir_path, "vectorstore")
+
+# Load the vectorstore and retriever
+embedding = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+vectorstore = FAISS.load_local(vectorstore_path, embedding, allow_dangerous_deserialization=True)
+retriever = vectorstore.as_retriever(search_kwargs={"k": 20})
+
+# Load Gemini 2.5 Flash model
+>>>>>>> eb18b58eb3dc22a6c926d1ac6a67c3797a546658
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=1.2)
 
 def prompt_llm(user_prompt: str) -> str:

@@ -11,5 +11,9 @@ dependencies = [
     "langchain-google-genai>=2.1.8",
     "langchain-community>=0.3.27",
     "faiss-cpu>=1.11.0",
+<<<<<<< HEAD
     "huggingface-hub>=0.34.3",
 ]
+=======
+]
+>>>>>>> eb18b58eb3dc22a6c926d1ac6a67c3797a546658

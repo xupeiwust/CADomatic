@@ -157,7 +157,10 @@ source = { virtual = "." }
 dependencies = [
     { name = "beautifulsoup4" },
     { name = "faiss-cpu" },
+<<<<<<< HEAD
     { name = "huggingface-hub" },
+=======
+>>>>>>> eb18b58eb3dc22a6c926d1ac6a67c3797a546658
     { name = "langchain" },
     { name = "langchain-community" },
     { name = "langchain-google-genai" },
@@ -168,7 +171,10 @@ dependencies = [
 requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.13.4" },
     { name = "faiss-cpu", specifier = ">=1.11.0" },
+<<<<<<< HEAD
     { name = "huggingface-hub", specifier = ">=0.34.3" },
+=======
+>>>>>>> eb18b58eb3dc22a6c926d1ac6a67c3797a546658
     { name = "langchain", specifier = ">=0.3.27" },
     { name = "langchain-community", specifier = ">=0.3.27" },
     { name = "langchain-google-genai", specifier = ">=2.1.8" },
@@ -278,6 +284,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "colorama"
 version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -287,6 +294,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> eb18b58eb3dc22a6c926d1ac6a67c3797a546658
 name = "dataclasses-json"
 version = "0.6.7"
 source = { registry = "https://pypi.org/simple" }
@@ -336,6 +345,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "filelock"
 version = "3.18.0"
 source = { registry = "https://pypi.org/simple" }
@@ -345,6 +355,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> eb18b58eb3dc22a6c926d1ac6a67c3797a546658
 name = "filetype"
 version = "1.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -431,6 +443,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "fsspec"
 version = "2025.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -440,6 +453,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> eb18b58eb3dc22a6c926d1ac6a67c3797a546658
 name = "google-ai-generativelanguage"
 version = "0.6.18"
 source = { registry = "https://pypi.org/simple" }
@@ -606,6 +621,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "hf-xet"
 version = "1.1.5"
 source = { registry = "https://pypi.org/simple" }
@@ -621,6 +637,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> eb18b58eb3dc22a6c926d1ac6a67c3797a546658
 name = "httpcore"
 version = "1.0.9"
 source = { registry = "https://pypi.org/simple" }
@@ -658,6 +676,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "huggingface-hub"
 version = "0.34.3"
 source = { registry = "https://pypi.org/simple" }
@@ -677,6 +696,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> eb18b58eb3dc22a6c926d1ac6a67c3797a546658
 name = "idna"
 version = "3.10"
 source = { registry = "https://pypi.org/simple" }
@@ -1437,6 +1458,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "tqdm"
 version = "4.67.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1449,6 +1471,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> eb18b58eb3dc22a6c926d1ac6a67c3797a546658
 name = "typing-extensions"
 version = "4.14.1"
 source = { registry = "https://pypi.org/simple" }
