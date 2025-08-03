@@ -1,0 +1,15 @@
+[project]
+name = "cadomatic"
+version = "0.1.0"
+description = "This is a code to create editable CAD files from natural language prompts"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "python-dotenv>=1.1.1",
+    "langchain>=0.3.27",
+    "beautifulsoup4>=4.13.4",
+    "langchain-google-genai>=2.1.8",
+    "langchain-community>=0.3.27",
+    "faiss-cpu>=1.11.0",
+    "huggingface-hub>=0.34.3",
+]
