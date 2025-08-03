@@ -7,11 +7,7 @@ CADomatic is a Python-based tool that generates editable parametric CAD scripts 
 
 ## 🔍 What It Does
 
-<<<<<<< HEAD
 ![CADomatic Demo](demo/0.1.0_flange_generation.gif)
-=======
-![CADomatic Demo](demo/flange_zoomed.gif)
->>>>>>> eb18b58eb3dc22a6c926d1ac6a67c3797a546658
 
 - ✅ **Generates editable FreeCAD Python scripts** for parts like screws, nuts, fasteners, and more
 - ✅ Each script can be modified for custom parameters (length, diameter, features, etc.)
