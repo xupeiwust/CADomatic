@@ -2,47 +2,82 @@ import gradio as gr
 from pathlib import Path
 from process import generate_script_and_run
 
-# Folder where FreeCAD outputs the actual files
+# === File Paths ===
 generated_dir = Path(__file__).parent / "generated"
 fcstd_file = generated_dir / "model.FCStd"
 obj_file = generated_dir / "model.obj"
 
-# Optionally remove stale broken files (copies)
+# Remove stale files
 for file in ["generated_model.FCStd", "generated_model.obj"]:
     fpath = generated_dir / file
     if fpath.exists():
         fpath.unlink()
 
+# === CAD Generation Callback ===
 def prepare_outputs(description):
-    # Run FreeCAD pipeline
     generate_script_and_run(description)
+    return str(fcstd_file), str(obj_file), str(obj_file)
 
-    # Return paths to the real output files directly
-    return str(fcstd_file), str(obj_file), str(obj_file)  # model.obj for preview
+# === UI with Custom CSS ===
+with gr.Blocks(css="""
+    #generate-btn .gr-button {
+        background-color: #28a745 !important;
+        color: white !important;
+    }
 
-with gr.Blocks() as demo:
-    gr.Markdown("# 🛠️ CADomatic - FreeCAD Script Generator")
-    gr.Markdown("Enter a CAD description to generate your 3D model:")
+    #fcstd-download .gr-button,
+    #obj-download .gr-button {
+        background-color: #fd7e14 !important;
+        color: white !important;
+    }
+
+    .footer-text {
+        text-align: center;
+        font-size: 0.85rem;
+        margin-top: 2em;
+        color: #888;
+    }
+
+    .footer-text a {
+        color: #fd7e14;
+        text-decoration: none;
+    }
+
+    .footer-text a:hover {
+        text-decoration: underline;
+    }
+""") as demo:
+
+    gr.Markdown("<h1 style='text-align: center;'> CADomatic - FreeCAD Script Generator</h1>")
+    gr.Markdown("Generate 3D models by describing them in plain English. Powered by FreeCAD and LLMs.")
 
     input_text = gr.Textbox(
-        label="Describe your FreeCAD part",
+        label="📝 Describe your FreeCAD part",
         lines=3,
         placeholder="e.g., Create a 10mm thick cylinder with radius 5mm..."
     )
 
-    generate_btn = gr.Button("Generate", variant="primary")
+    generate_btn = gr.Button("Generate", elem_id="generate-btn")
 
-    model_preview = gr.Model3D(label="3D Preview", height=400)
+    model_preview = gr.Model3D(label="🔍 3D Preview", height=400)
 
     with gr.Row():
-        fcstd_download_btn = gr.DownloadButton(label="Download .FCStd", variant="secondary")
-        obj_download_btn = gr.DownloadButton(label="Download .obj", variant="secondary")
+        fcstd_download = gr.DownloadButton("Download .FCStd file", elem_id="fcstd-download")
+        obj_download = gr.DownloadButton("Download .obj file", elem_id="obj-download")
 
     generate_btn.click(
         fn=prepare_outputs,
         inputs=input_text,
-        outputs=[fcstd_download_btn, obj_download_btn, model_preview]
+        outputs=[fcstd_download, obj_download, model_preview]
     )
+
+    gr.HTML("""
+        <div class='footer-text'>
+            <strong>Note:</strong> CADomatic is still under development and still needs to be refined. For best results, run it locally. Toggle to view all in downloaded .FCStd file to see the generated part<br>
+            Please refresh and run if there is no preview<br>
+            View the source on <a href="https://github.com/yas1nsyed/CADomatic" target="_blank">GitHub</a>.
+        </div>
+    """)
 
 if __name__ == "__main__":
     demo.launch()
