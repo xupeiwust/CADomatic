@@ -211,3 +211,8 @@ __marimo__/
 # Ignore FAISS and pickle index files
 /vectorstore/index.faiss
 /vectorstore/index.pkl
+
+# Ignore the generated model
+app/generated/
+app/generated/model.FCStd
+app/generated/model.obj
