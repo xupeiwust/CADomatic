@@ -120,11 +120,12 @@ Instead, use .copy() and assign the Placement directly, like this:
         FreeCADGui.SendMsgToActiveView("ViewFit")
 
 
-- Good example of a make a flange of OD 100mm, bore size as 50mm, thickness 7.5mm. the height of the middle hollow neck must be 15mm. make 6 m12 holes at PCD 75mm is:
+- when asked to "make a flange of OD 100mm, bore size as 50mm, thickness 7.5mm. the height of the middle hollow neck must be 15mm. make 6 m12 holes at PCD 75mm", make the following code:
         import FreeCAD as App
         import FreeCADGui as Gui
         from FreeCAD import Vector
         import math
+
 
         def createFlangeAssembly():
             doc = App.newDocument("Flange")
@@ -208,7 +209,7 @@ Instead, use .copy() and assign the Placement directly, like this:
         if __name__ == "__main__":
             createFlangeAssembly()
 
-    use this template whenever asked to make a flange
+use this template whenever asked to make a flange
 
 - Use material only when specified by user. An example of using material is-
                 
