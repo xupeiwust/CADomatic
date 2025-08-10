@@ -372,3 +372,194 @@ This is a good example for a teapot. Whenever asked to generate a teapot, make s
     if __name__ == "__main__":
         createTeapot()
 
+- This is a good example for a herringbone gear. If asked to make a herringbone gear, generate similar:
+    #Herringbone gear
+
+    import FreeCAD as App
+    import FreeCADGui as Gui
+    import Part
+    import math
+    from FreeCAD import Vector, Placement, Rotation
+
+    def createHerringboneGear(
+        num_teeth=20,
+        module=5.0,
+        pressure_angle_deg=20.0,
+        helix_angle_deg=25.0,
+        face_width=50.0,
+        central_bore_diameter=20.0,
+        num_loft_sections=50,
+        addendum_factor=1.0,
+        dedendum_factor=1.25,
+        tooth_radial_offset=1.5  # Teeth pushed radially outward
+    ):
+        doc = App.newDocument("HerringboneGear")
+
+        pressure_angle_rad = math.radians(pressure_angle_deg)
+        helix_angle_rad = math.radians(helix_angle_deg)
+
+        pitch_diameter = module * num_teeth
+        pitch_radius = pitch_diameter / 2
+        addendum = addendum_factor * module
+        dedendum = dedendum_factor * module
+        root_radius = pitch_radius - dedendum + tooth_radial_offset
+        outer_radius = pitch_radius + addendum + tooth_radial_offset
+
+        gear_total_height = face_width
+        half_gear_height = gear_total_height / 2
+
+        total_angular_twist_rad = (face_width * math.tan(helix_angle_rad)) / pitch_radius
+
+        gear_hub = doc.addObject("Part::Cylinder", "GearHub")
+        gear_hub.Radius = outer_radius - tooth_radial_offset
+        gear_hub.Height = gear_total_height
+        gear_hub.Placement.Base = Vector(0, 0, 0)
+
+        if central_bore_diameter > 0:
+            bore_radius = central_bore_diameter / 2
+            central_bore = doc.addObject("Part::Cylinder", "CentralBore")
+            central_bore.Radius = bore_radius
+            central_bore.Height = gear_total_height
+            central_bore.Placement.Base = Vector(0, 0, 0)
+
+            hub_base = doc.addObject("Part::Cut", "Hub_With_Bore")
+            hub_base.Base = gear_hub
+            hub_base.Tool = central_bore
+        else:
+            hub_base = gear_hub
+
+        angle_per_tooth = 360.0 / num_teeth
+
+        effective_half_angle_for_flank_base = (math.pi / num_teeth) / 2
+        effective_half_angle_for_flank_tip = effective_half_angle_for_flank_base * 0.7 
+
+        P_A = Vector(root_radius * math.sin(effective_half_angle_for_flank_base), root_radius * math.cos(effective_half_angle_for_flank_base), 0)
+        P_B = Vector(root_radius * math.sin(-effective_half_angle_for_flank_base), root_radius * math.cos(-effective_half_angle_for_flank_base), 0)
+
+        P_C = Vector(outer_radius * math.sin(effective_half_angle_for_flank_tip), outer_radius * math.cos(effective_half_angle_for_flank_tip), 0)
+        P_D = Vector(outer_radius * math.sin(-effective_half_angle_for_flank_tip), outer_radius * math.cos(-effective_half_angle_for_flank_tip), 0)
+
+        e_flank1 = Part.LineSegment(P_B, P_D).toShape()
+        e_flank2 = Part.LineSegment(P_A, P_C).toShape()
+
+        def offset_midpoint(p1, p2, offset=0.1):
+            mid = (p1 + p2).multiply(0.5)
+            vec = p2.sub(p1)
+            perp = Vector(-vec.y, vec.x, 0)
+            perp.normalize()
+            return mid.add(perp.multiply(offset))
+
+        tip_midpoint = offset_midpoint(P_D, P_C, 0.1)
+        e_tip_arc = Part.ArcOfCircle(P_D, tip_midpoint, P_C).toShape()
+
+        root_midpoint = offset_midpoint(P_A, P_B, 0.1)
+        e_root_arc = Part.ArcOfCircle(P_A, root_midpoint, P_B).toShape()
+
+        try:
+            tooth_profile_wire = Part.Wire([e_root_arc, e_flank1, e_tip_arc, e_flank2])
+        except Exception as e:
+            App.Console.PrintError(f"Error creating tooth profile wire: {e}. Using fallback wire.\n")
+            fallback_edges = [
+                Part.LineSegment(P_A, P_B).toShape(),
+                Part.LineSegment(P_B, P_D).toShape(),
+                Part.LineSegment(P_D, P_C).toShape(),
+                Part.LineSegment(P_C, P_A).toShape()
+            ]
+            tooth_profile_wire = Part.Wire(fallback_edges)
+
+        tooth_profile_face = Part.Face(tooth_profile_wire)
+
+        helical_teeth_LH_fused = None
+        lh_z_start = 0
+        lh_z_end = half_gear_height
+        lh_twist_start = 0
+        lh_twist_end = total_angular_twist_rad / 2
+
+        for tooth_idx in range(num_teeth):
+            current_tooth_LH_profiles = []
+            initial_tooth_rotation_deg = tooth_idx * angle_per_tooth
+
+            for i in range(num_loft_sections + 1):
+                z_pos_current = lh_z_start + (lh_z_end - lh_z_start) * (i / num_loft_sections)
+                current_slice_twist_angle_rad = lh_twist_start + (lh_twist_end - lh_twist_start) * (i / num_loft_sections)
+
+                combined_rotation_deg = initial_tooth_rotation_deg + math.degrees(current_slice_twist_angle_rad)
+
+                profile_copy = tooth_profile_face.copy()
+                profile_copy.Placement = Placement(
+                    Vector(0, 0, z_pos_current),
+                    Rotation(Vector(0, 0, 1), combined_rotation_deg)
+                )
+                current_tooth_LH_profiles.append(profile_copy)
+
+            helical_tooth_LH_solid = Part.makeLoft(current_tooth_LH_profiles, True)
+
+            if helical_teeth_LH_fused is None:
+                helical_teeth_LH_fused = helical_tooth_LH_solid
+            else:
+                helical_teeth_LH_fused = helical_teeth_LH_fused.fuse(helical_tooth_LH_solid)
+
+        obj_helical_LH = doc.addObject("Part::Feature", "HelicalTeeth_Left_Section")
+        obj_helical_LH.Shape = helical_teeth_LH_fused
+        obj_helical_LH.ViewObject.ShapeColor = (0.7, 0.7, 0.9)
+
+        helical_teeth_RH_fused = None
+        rh_z_start = half_gear_height
+        rh_z_end = gear_total_height
+        rh_twist_start = total_angular_twist_rad / 2
+        rh_twist_end = 0
+
+        for tooth_idx in range(num_teeth):
+            current_tooth_RH_profiles = []
+            initial_tooth_rotation_deg = tooth_idx * angle_per_tooth
+
+            for i in range(num_loft_sections + 1):
+                z_pos_current = rh_z_start + (rh_z_end - rh_z_start) * (i / num_loft_sections)
+                current_slice_twist_angle_rad = rh_twist_start + (rh_twist_end - rh_twist_start) * (i / num_loft_sections)
+
+                combined_rotation_deg = initial_tooth_rotation_deg + math.degrees(current_slice_twist_angle_rad)
+
+                profile_copy = tooth_profile_face.copy()
+                profile_copy.Placement = Placement(
+                    Vector(0, 0, z_pos_current),
+                    Rotation(Vector(0, 0, 1), combined_rotation_deg)
+                )
+                current_tooth_RH_profiles.append(profile_copy)
+
+            helical_tooth_RH_solid = Part.makeLoft(current_tooth_RH_profiles, True)
+
+            if helical_teeth_RH_fused is None:
+                helical_teeth_RH_fused = helical_tooth_RH_solid
+            else:
+                helical_teeth_RH_fused = helical_teeth_RH_fused.fuse(helical_tooth_RH_solid)
+
+        obj_helical_RH = doc.addObject("Part::Feature", "HelicalTeeth_Right_Section")
+        obj_helical_RH.Shape = helical_teeth_RH_fused
+        obj_helical_RH.ViewObject.ShapeColor = (0.7, 0.9, 0.7)
+
+        combined_teeth_sections = doc.addObject("Part::Fuse", "Combined_Teeth_Sections")
+        combined_teeth_sections.Base = obj_helical_LH
+        combined_teeth_sections.Tool = obj_helical_RH
+
+        final_gear = doc.addObject("Part::Fuse", "HerringboneGear_Complete")
+        final_gear.Base = hub_base
+        final_gear.Tool = combined_teeth_sections
+
+        final_gear.ViewObject.ShapeColor = (0.8, 0.6, 0.9)
+
+        if central_bore_diameter > 0:
+            central_bore.ViewObject.Visibility = False
+        gear_hub.ViewObject.Visibility = False
+        hub_base.ViewObject.Visibility = False
+        obj_helical_LH.ViewObject.Visibility = False
+        obj_helical_RH.ViewObject.Visibility = False
+        combined_teeth_sections.ViewObject.Visibility = False
+
+        doc.recompute()
+        Gui.activeDocument().activeView().viewAxometric()
+        Gui.SendMsgToActiveView("ViewFit")
+
+        return doc
+
+    if __name__ == "__main__":
+        createHerringboneGear()
