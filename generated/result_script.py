@@ -1,88 +1,139 @@
 import FreeCAD as App
 import FreeCADGui as Gui
-from FreeCAD import Vector
-import math
+from FreeCAD import Vector, Placement, Rotation
+import Part
 
+BODY_BOTTOM_RADIUS = 50.0
+BODY_MAX_RADIUS = 80.0
+BODY_HEIGHT = 100.0
+LID_OPENING_RADIUS = 35.0
 
-def createFlangeAssembly():
-    doc = App.newDocument("Flange")
+SPOUT_ATTACH_HEIGHT = BODY_HEIGHT * 0.5
+SPOUT_OFFSET_Y = BODY_MAX_RADIUS * 0.7
+SPOUT_LENGTH_HORIZONTAL = 60.0
+SPOUT_LENGTH_VERTICAL = 30.0
+SPOUT_RADIUS = 7.0
 
-    # === Parameters ===
-    FLANGE_OUTER_DIAMETER = 100.0
-    FLANGE_THICKNESS = 7.5
-    BORE_INNER_DIAMETER = 50.0
-    NECK_HEIGHT = 15.0
-    NECK_OUTER_DIAMETER = 60.0 # Keeping this from the template as not specified in prompt
-    NUM_BOLT_HOLES = 6
-    BOLT_HOLE_DIAMETER = 12.0
-    PCD = 75.0
+HANDLE_ATTACH_TOP_HEIGHT = BODY_HEIGHT * 0.7
+HANDLE_ATTACH_BOTTOM_HEIGHT = BODY_HEIGHT * 0.3
+HANDLE_OFFSET_Y = -BODY_MAX_RADIUS * 0.7
+HANDLE_RADIUS = 6.0
 
-    total_height = FLANGE_THICKNESS + NECK_HEIGHT
+def createTeapot():
+    doc = App.newDocument("Teapot")
 
-    # === 1. Create flange base ===
-    flange = doc.addObject("Part::Cylinder", "Flange_Base")
-    flange.Radius = FLANGE_OUTER_DIAMETER / 2
-    flange.Height = FLANGE_THICKNESS
+    body_profile_pts = [
+        Vector(BODY_BOTTOM_RADIUS, 0, 0),
+        Vector(BODY_MAX_RADIUS, 0, BODY_HEIGHT * 0.4),
+        Vector(BODY_MAX_RADIUS * 0.8, 0, BODY_HEIGHT * 0.7),
+        Vector(LID_OPENING_RADIUS, 0, BODY_HEIGHT)
+    ]
+    body_spline = Part.BSplineCurve(body_profile_pts)
+    body_edge = body_spline.toShape()
+    line1 = Part.LineSegment(Vector(LID_OPENING_RADIUS, 0, BODY_HEIGHT), Vector(0, 0, BODY_HEIGHT)).toShape()
+    line2 = Part.LineSegment(Vector(0, 0, BODY_HEIGHT), Vector(0, 0, 0)).toShape()
+    line3 = Part.LineSegment(Vector(0, 0, 0), Vector(BODY_BOTTOM_RADIUS, 0, 0)).toShape()
+    wire = Part.Wire([body_edge, line1, line2, line3])
+    face = Part.Face(wire)
+    body_solid = face.revolve(Vector(0, 0, 0), Vector(0, 0, 1), 360)
 
-    # === 2. Cut central bore from flange ===
-    bore = doc.addObject("Part::Cylinder", "Central_Bore_Cutter")
-    bore.Radius = BORE_INNER_DIAMETER / 2
-    bore.Height = FLANGE_THICKNESS
-    bore_cut = doc.addObject("Part::Cut", "Flange_with_Bore")
-    bore_cut.Base = flange
-    bore_cut.Tool = bore
+    obj_body = doc.addObject("Part::Feature", "Body")
+    obj_body.Shape = body_solid
+    obj_body.ViewObject.ShapeColor = (0.9, 0.7, 0.7)
 
-    # === 3. Create neck ===
-    neck_outer = doc.addObject("Part::Cylinder", "Neck_Outer")
-    neck_outer.Radius = NECK_OUTER_DIAMETER / 2
-    neck_outer.Height = NECK_HEIGHT
-    neck_outer.Placement.Base = Vector(0, 0, FLANGE_THICKNESS)
+    lid_profile_pts = [
+        Vector(36.0, 0, 0),
+        Vector(36.0, 0, 3.0),
+        Vector(35.0, 0, 3.0 + 20.0 * 0.2),
+        Vector(17.5, 0, 3.0 + 20.0 * 0.7),
+        Vector(10.0, 0, 3.0 + 20.0),
+        Vector(5.0, 0, 3.0 + 20.0 + 15.0 * 0.8),
+        Vector(0, 0, 3.0 + 20.0 + 15.0)
+    ]
+    lid_spline = Part.BSplineCurve(lid_profile_pts)
+    lid_edge = lid_spline.toShape()
+    line4 = Part.LineSegment(Vector(0, 0, 3.0 + 20.0 + 15.0), Vector(0, 0, 0)).toShape()
+    line5 = Part.LineSegment(Vector(0, 0, 0), Vector(36.0, 0, 0)).toShape()
+    wire_lid = Part.Wire([lid_edge, line4, line5])
+    face_lid = Part.Face(wire_lid)
+    lid_solid = face_lid.revolve(Vector(0, 0, 0), Vector(0, 0, 1), 360)
 
-    neck_inner = doc.addObject("Part::Cylinder", "Neck_Inner_Cutter")
-    neck_inner.Radius = BORE_INNER_DIAMETER / 2
-    neck_inner.Height = NECK_HEIGHT
-    neck_inner.Placement.Base = Vector(0, 0, FLANGE_THICKNESS)
+    obj_lid = doc.addObject("Part::Feature", "Lid")
+    obj_lid.Shape = lid_solid
+    obj_lid.Placement = Placement(Vector(0, 0, BODY_HEIGHT), Rotation())
+    obj_lid.ViewObject.ShapeColor = (0.9, 0.7, 0.7)
 
-    neck_hollow = doc.addObject("Part::Cut", "Hollow_Neck_Part")
-    neck_hollow.Base = neck_outer
-    neck_hollow.Tool = neck_inner
+    spout_path_pts = [
+        Vector(0, -121, 66),
+        Vector(0, -91, 51),
+        Vector(0, -61, 36)
+    ]
 
-    # === 4. Fuse flange (with central hole) and neck ===
-    fused = doc.addObject("Part::Fuse", "Flange_and_Neck_Fused")
-    fused.Base = bore_cut
-    fused.Tool = neck_hollow
+    spout_curve = Part.BSplineCurve(spout_path_pts)
+    spout_wire = Part.Wire(spout_curve.toShape())
 
-    # === 5. Cut bolt holes sequentially ===
-    current_shape_obj = fused # Reference to the last cut object in the tree
-    bolt_radius = BOLT_HOLE_DIAMETER / 2
-    bolt_circle_radius = PCD / 2
+    tangent_spout = spout_curve.tangent(spout_curve.FirstParameter)[0]
+    tangent_spout.normalize()
 
-    for i in range(NUM_BOLT_HOLES):
-        angle_deg = 360 * i / NUM_BOLT_HOLES
-        angle_rad = math.radians(angle_deg)
-        x = bolt_circle_radius * math.cos(angle_rad)
-        y = bolt_circle_radius * math.sin(angle_rad)
+    spout_circle = Part.Circle()
+    spout_circle.Center = spout_path_pts[0]
+    spout_circle.Axis = tangent_spout
+    spout_circle.Radius = SPOUT_RADIUS
+    spout_profile = Part.Wire(spout_circle.toShape())
 
-        hole_cutter = doc.addObject("Part::Cylinder", f"Bolt_Hole_Cutter_{i+1:02d}")
-        hole_cutter.Radius = bolt_radius
-        hole_cutter.Height = total_height
-        hole_cutter.Placement.Base = Vector(x, y, 0)
+    spout_solid = spout_wire.makePipe(spout_profile)
+    obj_spout = doc.addObject("Part::Feature", "Spout")
+    obj_spout.Shape = spout_solid
+    obj_spout.ViewObject.ShapeColor = (0.9, 0.7, 0.7)
 
-        cut_obj = doc.addObject("Part::Cut", f"Flange_with_Hole_{i+1:02d}")
-        cut_obj.Base = current_shape_obj
-        cut_obj.Tool = hole_cutter
-        current_shape_obj = cut_obj  # Update for the next iteration
+    handle_path_pts = [
+        Vector(0, 56, 31),
+        Vector(0, 78, 43),
+        Vector(0, 78, 79),
+        Vector(0, 56, 71)
+    ]
 
-    # === 6. Final result ===
-    # The final object is current_shape_obj after all cuts
+    handle_curve = Part.BSplineCurve(handle_path_pts)
+    handle_wire = Part.Wire(handle_curve.toShape())
 
-    # Recompute and fit view
+    tangent_handle = handle_curve.tangent(handle_curve.FirstParameter)[0]
+    tangent_handle.normalize()
+
+    handle_circle = Part.Circle()
+    handle_circle.Center = handle_path_pts[0]
+    handle_circle.Axis = tangent_handle
+    handle_circle.Radius = HANDLE_RADIUS
+    handle_profile = Part.Wire(handle_circle.toShape())
+
+    handle_solid = handle_wire.makePipe(handle_profile)
+    obj_handle = doc.addObject("Part::Feature", "Handle")
+    obj_handle.Shape = handle_solid
+    obj_handle.ViewObject.ShapeColor = (0.9, 0.7, 0.7)
+
+    fused = obj_body.Shape.fuse(obj_lid.Shape)
+    fused = fused.fuse(obj_spout.Shape)
+    fused = fused.fuse(obj_handle.Shape)
+
+    obj_final = doc.addObject("Part::Feature", "Teapot_Complete")
+    obj_final.Shape = fused
+    obj_final.ViewObject.ShapeColor = (0.9, 0.6, 0.6)
+
+    obj_body.ViewObject.Visibility = False
+    obj_lid.ViewObject.Visibility = False
+    obj_spout.ViewObject.Visibility = False
+    obj_handle.ViewObject.Visibility = False
+
     doc.recompute()
+
     Gui.activeDocument().activeView().viewAxometric()
     Gui.SendMsgToActiveView("ViewFit")
 
     return doc
 
 if __name__ == "__main__":
-    createFlangeAssembly()
+    createTeapot()
 
+
+import FreeCADGui
+FreeCADGui.activeDocument().activeView().viewAxometric()
+FreeCADGui.SendMsgToActiveView("ViewFit")

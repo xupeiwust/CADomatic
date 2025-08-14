@@ -4,11 +4,9 @@ from huggingface_hub import hf_hub_download
 from langchain_community.vectorstores import FAISS
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from dotenv import load_dotenv
-import google.generativeai as genai
 
 # Load API key
 load_dotenv()
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
 # Set up Hugging Face repo and files
 REPO_ID = "Yas1n/CADomatic_vectorstore"
