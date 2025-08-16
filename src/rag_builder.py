@@ -4,16 +4,11 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-
-# --- Step 1: ENV setup ---
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from dotenv import load_dotenv
-import google.generativeai as genai
 
 load_dotenv()
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
-# --- Step 2: Crawler ---
 BASE_URL_WIKI = "https://wiki.freecad.org/Power_users_hub"
 BASE_URL_GITHUB = "https://github.com/shaise/FreeCAD_FastenersWB"
 
@@ -22,21 +17,22 @@ DOMAIN_WHITELIST = [
     "https://github.com/shaise"
 ]
 
-# List of language identifiers to exclude (only for wiki)
 LANG_IDENTIFIERS = [
     "/id", "/de", "/tr", "/es", "/fr", "/hr", "/it", "/pl",
     "/pt", "/pt-br", "/ro", "/fi", "/sv", "/cs", "/ru", "/zh-cn",
     "/zh-tw", "/ja", "/ko"
 ]
 
+CHECKPOINT_INTERVAL = 500  # save every 500 pages
+
+VECTORSTORE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../vectorstore")
+os.makedirs(VECTORSTORE_PATH, exist_ok=True)
+
 def is_excluded_url(url):
     url_lower = url.lower()
-
-    # Apply language filters only to FreeCAD wiki URLs
     if "wiki.freecad.org" in url_lower:
         if any(lang in url_lower for lang in LANG_IDENTIFIERS):
             return True
-
     return (
         ".jpg" in url_lower or
         ".png" in url_lower or
@@ -71,40 +67,42 @@ def crawl_wiki(start_url, max_pages):
                 if any(full.startswith(domain) for domain in DOMAIN_WHITELIST):
                     if full not in visited and not is_excluded_url(full):
                         to_visit.append(full)
+
+            # --- Checkpoint: save every N pages ---
+            if len(pages) % CHECKPOINT_INTERVAL == 0:
+                save_vectorstore_checkpoint(pages, checkpoint_suffix=f"checkpoint_{len(pages)}")
+                print(f"Checkpoint saved after {len(pages)} pages")
         except Exception as e:
             print(f"Error fetching {url}: {e}")
 
-    print(f"Crawled {len(pages)} pages from {start_url}")
     return pages
 
-# --- Step 3: RAG Build ---
-def build_vectorstore():
-    wiki_pages = crawl_wiki(BASE_URL_WIKI, max_pages=2000)  # Uncomment if you want both
-    github_pages = crawl_wiki(BASE_URL_GITHUB, max_pages=450)
-    pages = wiki_pages + github_pages
-
-    if not pages:
-        print("No pages crawled. Exiting.")
-        return
-
+def save_vectorstore_checkpoint(pages, checkpoint_suffix="latest"):
     texts = [p["text"] for p in pages]
     metadatas = [{"source": p["url"]} for p in pages]
 
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
     docs = splitter.create_documents(texts, metadatas=metadatas)
 
-    print(f"Split into {len(docs)} chunks")
-
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
     vectorstore = FAISS.from_documents(docs, embeddings)
 
-    src_path = os.path.dirname(os.path.abspath(__file__))
-    root_dir_path = os.path.dirname(src_path)
-    vectorstore_path = os.path.join(root_dir_path, "vectorstore")
+    checkpoint_path = os.path.join(VECTORSTORE_PATH, checkpoint_suffix)
+    os.makedirs(checkpoint_path, exist_ok=True)
+    vectorstore.save_local(checkpoint_path)
 
-    os.makedirs(vectorstore_path, exist_ok=True)
-    vectorstore.save_local(vectorstore_path)
-    print("Vectorstore saved to ./vectorstore")
+def build_vectorstore():
+    wiki_pages = crawl_wiki(BASE_URL_WIKI, max_pages=2000) #2000
+    github_pages = crawl_wiki(BASE_URL_GITHUB, max_pages=450) #450
+    all_pages = wiki_pages + github_pages
+
+    if not all_pages:
+        print("No pages crawled. Exiting.")
+        return
+
+    # Final save
+    save_vectorstore_checkpoint(all_pages, checkpoint_suffix="final")
+    print(f"Vectorstore fully saved to {VECTORSTORE_PATH}/final")
 
 if __name__ == "__main__":
     build_vectorstore()
