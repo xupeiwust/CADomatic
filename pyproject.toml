@@ -13,4 +13,7 @@ dependencies = [
     "faiss-cpu>=1.11.0",
     "huggingface-hub>=0.34.3",
     "gradio>=5.39.0",
+    "sentence-transformers>=5.1.0",
+    "groq>=0.31.0",
+    "langchain-huggingface>=0.3.1",
 ]
