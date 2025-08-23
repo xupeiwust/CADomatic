@@ -1,66 +1,67 @@
 import FreeCAD as App
-import FreeCADGui as Gui
-from FreeCAD import Vector, Placement, Rotation
 import Part
+from FreeCAD import Vector, Placement, Rotation
 import math
 
-def createFlangeAssembly():
-    doc = App.newDocument("Flange")
-    FLANGE_OUTER_DIAMETER = 100.0
-    FLANGE_THICKNESS = 7.5
-    BORE_INNER_DIAMETER = 50.0
-    NECK_HEIGHT = 15.0
-    NECK_OUTER_DIAMETER = 60.0
-    NUM_BOLT_HOLES = 6
-    BOLT_HOLE_DIAMETER = 12.0
-    PCD = 75.0
-    total_height = FLANGE_THICKNESS + NECK_HEIGHT
-    flange = doc.addObject("Part::Cylinder", "Flange")
-    flange.Radius = FLANGE_OUTER_DIAMETER / 2
-    flange.Height = FLANGE_THICKNESS
-    bore = doc.addObject("Part::Cylinder", "CentralBore")
-    bore.Radius = BORE_INNER_DIAMETER / 2
-    bore.Height = FLANGE_THICKNESS
-    bore_cut = doc.addObject("Part::Cut", "FlangeWithBore")
-    bore_cut.Base = flange
-    bore_cut.Tool = bore
-    neck_outer = doc.addObject("Part::Cylinder", "NeckOuter")
-    neck_outer.Radius = NECK_OUTER_DIAMETER / 2
-    neck_outer.Height = NECK_HEIGHT
-    neck_outer.Placement.Base = Vector(0, 0, FLANGE_THICKNESS)
-    neck_inner = doc.addObject("Part::Cylinder", "NeckInner")
-    neck_inner.Radius = BORE_INNER_DIAMETER / 2
-    neck_inner.Height = NECK_HEIGHT
-    neck_inner.Placement.Base = Vector(0, 0, FLANGE_THICKNESS)
-    neck_hollow = doc.addObject("Part::Cut", "HollowNeck")
-    neck_hollow.Base = neck_outer
-    neck_hollow.Tool = neck_inner
-    fused = doc.addObject("Part::Fuse", "FlangeAndNeck")
-    fused.Base = bore_cut
-    fused.Tool = neck_hollow
-    current_shape = fused
-    bolt_radius = BOLT_HOLE_DIAMETER / 2
-    bolt_circle_radius = PCD / 2
-    for i in range(NUM_BOLT_HOLES):
-        angle_rad = math.radians(360 * i / NUM_BOLT_HOLES)
-        x = bolt_circle_radius * math.cos(angle_rad)
-        y = bolt_circle_radius * math.sin(angle_rad)
-        hole = doc.addObject("Part::Cylinder", f"BoltHole_{i+1:02d}")
-        hole.Radius = bolt_radius
-        hole.Height = total_height
-        hole.Placement.Base = Vector(x, y, 0)
-        cut = doc.addObject("Part::Cut", f"Cut_Bolt_{i+1:02d}")
-        cut.Base = current_shape
-        cut.Tool = hole
-        current_shape = cut
-    doc.recompute()
-    Gui.activeDocument().activeView().viewAxometric()
-    Gui.SendMsgToActiveView("ViewFit")
-    return doc
+doc = App.newDocument("Flange")
 
-if __name__ == "__main__":
-    createFlangeAssembly()
+main_body_radius_val = 20.0
+main_body_height_val = 50.0
+flange_outer_radius_val = 40.0
+flange_thickness_val = 10.0
+pcd_val = 60.0
+num_bolt_holes_val = 6
+bolt_hole_radius_val = 5.0
+inner_pipe_radius_val = 15.0
 
+main_body = doc.addObject("Part::Cylinder", "MainBody")
+main_body.Radius = main_body_radius_val
+main_body.Height = main_body_height_val
+main_body.Placement = Placement(Vector(0, 0, 0), Rotation())
+
+flange_disc = doc.addObject("Part::Cylinder", "FlangeDisc")
+flange_disc.Radius = flange_outer_radius_val
+flange_disc.Height = flange_thickness_val
+flange_disc.Placement = Placement(Vector(0, 0, 0), Rotation())
+
+inner_pipe_hole = doc.addObject("Part::Cylinder", "InnerPipeHole")
+inner_pipe_hole.Radius = inner_pipe_radius_val
+inner_pipe_hole.Height = main_body_height_val + flange_thickness_val + 2.0
+inner_pipe_hole.Placement = Placement(Vector(0, 0, -1.0), Rotation())
+
+bolt_hole_cylinders = []
+for i in range(num_bolt_holes_val):
+    angle = 2 * math.pi * i / num_bolt_holes_val
+    x = pcd_val / 2 * math.cos(angle)
+    y = pcd_val / 2 * math.sin(angle)
+
+    bolt_hole = doc.addObject("Part::Cylinder", f"BoltHole_{i+1}")
+    bolt_hole.Radius = bolt_hole_radius_val
+    bolt_hole.Height = flange_thickness_val + 2.0
+    bolt_hole.Placement = Placement(Vector(x, y, -1.0), Rotation())
+    bolt_hole_cylinders.append(bolt_hole)
+
+base_flange_fuse = doc.addObject("Part::MultiFuse", "BaseFlange")
+base_flange_fuse.Shapes = [main_body, flange_disc]
+main_body.Visibility = False
+flange_disc.Visibility = False
+
+holes_to_cut_list = [inner_pipe_hole]
+holes_to_cut_list.extend(bolt_hole_cylinders)
+
+all_holes_fuse = doc.addObject("Part::MultiFuse", "AllHolesToCut")
+all_holes_fuse.Shapes = holes_to_cut_list
+inner_pipe_hole.Visibility = False
+for hole_obj in bolt_hole_cylinders:
+    hole_obj.Visibility = False
+
+final_flange = doc.addObject("Part::Cut", "Flange")
+final_flange.Base = base_flange_fuse
+final_flange.Tool = all_holes_fuse
+base_flange_fuse.Visibility = False
+all_holes_fuse.Visibility = False
+
+doc.recompute()
 
 
 import FreeCADGui

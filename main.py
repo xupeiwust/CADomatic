@@ -1,54 +1,106 @@
+# main.py
 from src.llm_client import prompt_llm
 from pathlib import Path
 import subprocess
+from src.run_freecad import open_freecad
 
-# File paths
-prompt_base = Path("prompts/base_instruction.txt")
-prompt_examples = Path("prompts/example_code.txt")
 GEN_SCRIPT = Path("generated/result_script.py")
 RUN_SCRIPT = Path("src/run_freecad.py")
+LOG_FILE = Path("generated/last_run_log.txt")
+BASE_INSTRUCTION = Path("prompts/base_instruction.txt")
 
-# Snippet to adjust FreeCAD GUI view
 GUI_SNIPPET = """
 import FreeCADGui
 FreeCADGui.activeDocument().activeView().viewAxometric()
 FreeCADGui.SendMsgToActiveView("ViewFit")
 """
 
+MAX_RETRIES = 3  # Maximum auto-fix attempts
+
+def run_freecad_script():
+    """Run FreeCAD script via run_freecad.py and return success flag."""
+    process = subprocess.run(
+        ["python", str(RUN_SCRIPT)],
+        capture_output=True,
+        text=True
+    )
+
+    # Read the log file after running
+    if LOG_FILE.exists():
+        log_content = LOG_FILE.read_text().strip()
+    else:
+        log_content = ""
+
+    harmless_message = "Exception while processing file: generated/result_script.py [module 'FreeCADGui' has no attribute 'activeDocument']"
+
+    if log_content and log_content != harmless_message:
+        print("❌ FreeCAD execution failed. See log for details.")
+        return False
+    else:
+        print("No errors in generated code!")
+        return True
+
 def main():
-    # Step 1: Get user input
     user_input = input("Describe your FreeCAD part: ")
 
-    # Step 2: Build prompt
-    base_prompt = prompt_base.read_text().strip()
-    example_prompt = prompt_examples.read_text().strip()
-    full_prompt = f"{base_prompt}\n\nExamples:\n{example_prompt}\n\nUser instruction: {user_input.strip()}"
+    # Read base instructions
+    base_instruction = BASE_INSTRUCTION.read_text().strip()
+    full_prompt = f"{base_instruction}\n\nUser instruction: {user_input}"
 
-
-    # Step 3: Get response from LLM
+    # Initial LLM generation
     generated_code = prompt_llm(full_prompt)
 
-    # Step 4: Clean up ```python code blocks if any
+    # Clean code fences if any
     if generated_code.startswith("```"):
         generated_code = generated_code.strip("`\n ")
         if generated_code.lower().startswith("python"):
             generated_code = generated_code[len("python"):].lstrip()
 
-    # Step 5: Append GUI snippet for viewing
+    # Append GUI snippet
     generated_code += "\n\n" + GUI_SNIPPET
 
-    # Step 6: Save to script file
+    # Save initial script
     GEN_SCRIPT.write_text(generated_code)
-    print(f"\n Code generated and written to {GEN_SCRIPT}")
+    print(f"\n✅ Initial code written to {GEN_SCRIPT}")
 
-    # Step 7: Execute the script via FreeCAD
-    print("Running FreeCAD with the generated script...")
-    try:
-        subprocess.run(["python", str(RUN_SCRIPT)], check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"❌ FreeCAD script execution failed with error code: {e.returncode}")
-    except Exception as e:
-        print(f"❌ Error running run_freecad.py: {e}")
+    for attempt in range(1, MAX_RETRIES + 1):
+        print(f"\n▶ Attempt {attempt} running FreeCAD...")
+        success = run_freecad_script()
+
+        if success:
+            open_freecad()
+            break
+
+        # Read captured FreeCAD logs
+        error_logs = LOG_FILE.read_text() if LOG_FILE.exists() else "No log found."
+
+        # Prepare prompt for LLM to fix the code
+        fix_prompt = f"""
+The following FreeCAD script failed during execution:
+
+{generated_code}
+
+Here is the error log:
+{error_logs}
+
+Please provide a corrected FreeCAD script. Keep the logic same, just correct the given error. Respond with valid FreeCAD 1.0.1 Python code only, no extra comments.
+"""
+        # Get fixed code from LLM
+        fixed_code = prompt_llm(fix_prompt)
+
+        # Clean code fences if present
+        if fixed_code.startswith("```"):
+            fixed_code = fixed_code.strip("`\n ")
+            if fixed_code.lower().startswith("python"):
+                fixed_code = fixed_code[len("python"):].lstrip()
+
+        # Save fixed code for next attempt
+        generated_code = fixed_code + "\n\n" + GUI_SNIPPET
+        GEN_SCRIPT.write_text(generated_code)
+        print(f"✅ Fixed code written to {GEN_SCRIPT}. Retrying...")
+
+    else:
+        print(f"❌ Max retries ({MAX_RETRIES}) reached. Check {LOG_FILE} for details.")
 
 if __name__ == "__main__":
     main()
