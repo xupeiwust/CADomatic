@@ -61,7 +61,7 @@ def main():
 
     # Save initial script
     GEN_SCRIPT.write_text(generated_code)
-    print(f"\n✅ Initial code written to {GEN_SCRIPT}")
+    print(f"\n     Initial code written to {GEN_SCRIPT}")
 
     for attempt in range(1, MAX_RETRIES + 1):
         print(f"\n▶ Attempt {attempt} running FreeCAD...")
@@ -97,7 +97,7 @@ Please provide a corrected FreeCAD script. Keep the logic same, just correct the
         # Save fixed code for next attempt
         generated_code = fixed_code + "\n\n" + GUI_SNIPPET
         GEN_SCRIPT.write_text(generated_code)
-        print(f"✅ Fixed code written to {GEN_SCRIPT}. Retrying...")
+        print(f"     Fixed code written to {GEN_SCRIPT}. Retrying...")
 
     else:
         print(f"❌ Max retries ({MAX_RETRIES}) reached. Check {LOG_FILE} for details.")

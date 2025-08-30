@@ -39,4 +39,4 @@ def open_freecad():
         raise FileNotFoundError("Generated script not found. Run main.py first.")
 
     subprocess.Popen([freecad_exe, str(script_path)])
-    print("✅ Opened in FreeCAD GUI.")
+    print("Opened the part in FreeCAD GUI. Enjoy :)")
