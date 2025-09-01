@@ -22,7 +22,7 @@ CADomatic is a Python-based tool that generates editable parametric CAD scripts 
 - ✅ Eliminates the need for manual modeling in the FreeCAD GUI
 ---
 ## Workflow
-![CADomatic Current Workflow](demo\CADomatic_current_workflow.svg)  
+![CADomatic Current Workflow](demo/CADomatic_current_workflow.svg)  
 *Current workflow of CADomatic v 1.0*
 ### - Current Workflow (v1.0)
 The current version of **CADomatic** follows a simple pipeline to generate CAD models from natural language descriptions:
@@ -32,7 +32,7 @@ The current version of **CADomatic** follows a simple pipeline to generate CAD m
 3. **Model Creation** – The script runs in **FreeCAD** (via CADomatic) to create a 3D model and render an image.
 4. **Output** – The final CAD file and preview image are returned to the user.
 
-![CADomatic Proposed Workflow](demo\CADomatic_proposed_workflow.svg)  
+![CADomatic Proposed Workflow](demo/CADomatic_proposed_workflow.svg)  
 *Proposed workflow of CADomatic v 2.0*
 
 ### - Proposed Workflow (v2.0)
