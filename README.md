@@ -20,6 +20,32 @@ CADomatic is a Python-based tool that generates editable parametric CAD scripts 
 - ✅ Outputs native `.py` scripts which use FreeCAD’s API to build geometry
 - ✅ Enables **version-controlled**, reusable, parametric CAD pipelines
 - ✅ Eliminates the need for manual modeling in the FreeCAD GUI
+---
+## Workflow
+![CADomatic Current Workflow](demo\CADomatic_current_workflow.svg)  
+*Current workflow of CADomatic v 1.0*
+### - Current Workflow (v1.0)
+The current version of **CADomatic** follows a simple pipeline to generate CAD models from natural language descriptions:
+
+1. **User Input** – Provide a design description as text.
+2. **LLM Processing** – The LLM generates a FreeCAD Python script.
+3. **Model Creation** – The script runs in **FreeCAD** (via CADomatic) to create a 3D model and render an image.
+4. **Output** – The final CAD file and preview image are returned to the user.
+
+![CADomatic Proposed Workflow](demo\CADomatic_proposed_workflow.svg)  
+*Proposed workflow of CADomatic v 2.0*
+
+### - Proposed Workflow (v2.0)
+I am currently working on an enhanced workflow for CADomatic v2.0, which introduces **image-based validation, feedback loops, and optional reference images** for higher accuracy and user control:
+
+1. **User Input** – Provide a text description and optionally a reference keyword.
+2. **Reference Image Input** – Provide an optional reference image or a drafting of the desired CAD model.
+3. **LLM Processing** – The LLM generates a FreeCAD Python script.
+4. **Model Creation & Rendering** – CADomatic creates the 3D model and renders an image.
+5. **Similarity Scoring** – The rendered image is compared against reference images to compute a similarity score.
+6. **Validation & Feedback Loop**  
+   - If the score meets the threshold, the final CAD model is returned.  
+   - If not, a VLM compares the images, explains differences, and feeds the desired changes into the LLM for regeneration for furtehr refinement.
 
 ---
 ## 💡 Why Use CADomatic?
