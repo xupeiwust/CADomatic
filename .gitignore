@@ -216,3 +216,6 @@ __marimo__/
 app/generated/
 app/generated/model.FCStd
 app/generated/model.obj
+
+
+.env.*
