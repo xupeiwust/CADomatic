@@ -1,15 +1,14 @@
 import Part
 import FreeCAD as App
-from FreeCAD import Vector
 
-doc = App.newDocument("Cube")
+doc = App.newDocument("CubeDoc")
 
-cube_side = 10.0
+cube_size = 10.0
 
-cube = Part.makeBox(cube_side, cube_side, cube_side)
+cube_shape = Part.makeBox(cube_size, cube_size, cube_size)
 
-obj = doc.addObject("Part::Feature", "CubeFeature")
-obj.Shape = cube
+obj = doc.addObject("Part::Feature", "Cube_10mm")
+obj.Shape = cube_shape
 
 doc.recompute()
 

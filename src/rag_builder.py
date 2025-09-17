@@ -5,9 +5,6 @@ from urllib.parse import urljoin
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
-from dotenv import load_dotenv
-
-load_dotenv()
 
 BASE_URL_WIKI = "https://wiki.freecad.org/Power_users_hub"
 BASE_URL_GITHUB = "https://github.com/shaise/FreeCAD_FastenersWB"
