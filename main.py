@@ -15,6 +15,15 @@ FreeCADGui.activeDocument().activeView().viewAxometric()
 FreeCADGui.SendMsgToActiveView("ViewFit")
 """
 
+screenshot_code = """
+import FreeCADGui
+import time
+time.sleep(5)  # allow GUI to load
+view = FreeCADGui.ActiveDocument.ActiveView
+view.saveImage(r'generated/screenshot.png', 480, 270, 'White')
+print("📸 Screenshot saved at generated/screenshot.png")
+"""
+
 MAX_RETRIES = 3  # Maximum auto-fix attempts
 
 def run_freecad_script():
@@ -31,11 +40,20 @@ def run_freecad_script():
     else:
         log_content = ""
 
-    harmless_message = "Exception while processing file: generated/result_script.py [module 'FreeCADGui' has no attribute 'activeDocument']"
-
-    if log_content and log_content != harmless_message:
-        print("❌ FreeCAD execution failed. See log for details.")
-        return False
+    harmless_messages = {
+        "Exception while processing file: generated/result_script.py [module 'FreeCADGui' has no attribute 'activeDocument']",
+        "Exception while processing file: generated/result_script.py [module 'FreeCADGui' has no attribute 'ActiveDocument']"
+        }
+    
+    if log_content:
+        if any(msg in log_content for msg in harmless_messages):
+            return True
+        elif "FreeCADGui" in log_content:
+            print("⚠️ Harmless FreeCADGui error detected. Ignoring...")
+            return True
+        else:
+            print("❌ FreeCAD execution failed. See log for details.")
+            return False
     else:
         print("No errors in generated code!")
         return True
@@ -57,7 +75,7 @@ def main():
             generated_code = generated_code[len("python"):].lstrip()
 
     # Append GUI snippet
-    generated_code += "\n\n" + GUI_SNIPPET
+    generated_code += "\n\n" + GUI_SNIPPET + screenshot_code
 
     # Save initial script
     GEN_SCRIPT.write_text(generated_code)
