@@ -1,18 +1,14 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
 from src.load_environment import load_env
 from langchain.schema import HumanMessage
+from pathlib import Path
 
 GEMINI_API_KEY = load_env.GEMINI_API_KEY_IMAGE
-image_path_cad = r"C:\Users\yasin\Desktop\flange_generated.png" # Update image paths
+image_path_cad = Path("generated/screenshot.png") # Update image paths
 image_path_downloaded = r"C:\Users\yasin\Desktop\flange_downloaded.jpeg" # Update image paths
 
-with open(image_path_cad, "rb") as f:
-    cad_bytes = f.read()
-with open(image_path_downloaded, "rb") as f:
-    real_bytes = f.read()
-
 llm = ChatGoogleGenerativeAI(
-    model="gemma-3-27b-it",
+    model="gemma-3-12b-it",
     api_key=GEMINI_API_KEY
 )
 
@@ -30,11 +26,6 @@ messages = [
             "Ignore color, texture, or surface finish. Dont write about differences in general apperance, color, texture, or surface finish"
             "Output **clear, step-by-step, pointwise instructions** describing exactly what changes to make in the CAD geometry. give only instructions, dont give any prefix like let's analyze the images and outline the necessary CAD modifications in FreeCAD"
             "Be precise with positions, and features whenever possible. make maximum of 7 lines"
-
-            # "Format the output as a consise list of changes. Example:"
-            # "Neck Shape- Flatten the Top, make the neck tapered at an angle"
-            # "Hole- the number of holes should be ___"
-            # "The relative distance between the outer diameter and inner diameter of the flange must be increased"
             
         ),
         # additional_kwargs={"images": [image_path_cad]}  # Pass both images

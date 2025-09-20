@@ -20,7 +20,7 @@ import FreeCADGui
 import time
 time.sleep(5)  # allow GUI to load
 view = FreeCADGui.ActiveDocument.ActiveView
-view.saveImage(r'generated/screenshot.png', 480, 270, 'White')
+view.saveImage(r'generated/screenshot.png', 720, 480, 'White')
 print("📸 Screenshot saved at generated/screenshot.png")
 """
 

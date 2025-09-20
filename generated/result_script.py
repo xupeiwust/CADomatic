@@ -1,39 +1,16 @@
+import FreeCAD as App
 import Part
-import math
-import FreeCAD
-from FreeCAD import Vector, Placement, Rotation
+from FreeCAD import Vector
 
-flange_outer_radius = 50.0
-flange_inner_radius = 25.0
-flange_thickness = 10.0
-bolt_hole_radius = 4.0
-num_bolt_holes = 6
-bolt_circle_diameter = 75.0
+doc = App.newDocument("Cube")
 
-doc = FreeCAD.newDocument("Flange")
+side_length = 10.0
 
-outer_cylinder = Part.makeCylinder(flange_outer_radius, flange_thickness)
-inner_cylinder = Part.makeCylinder(flange_inner_radius, flange_thickness)
-flange_body = outer_cylinder.cut(inner_cylinder)
+cube_shape = Part.makeBox(side_length, side_length, side_length)
 
-bolt_hole_shapes = []
-for i in range(num_bolt_holes):
-    angle_deg = i * (360.0 / num_bolt_holes)
-    angle_rad = math.radians(angle_deg)
+cube_obj = doc.addObject("Part::Feature", "Cube")
+cube_obj.Shape = cube_shape
 
-    x_pos = (bolt_circle_diameter / 2) * math.cos(angle_rad)
-    y_pos = (bolt_circle_diameter / 2) * math.sin(angle_rad)
-
-    single_bolt_hole = Part.makeCylinder(bolt_hole_radius, flange_thickness)
-    translated_bolt_hole = single_bolt_hole.translated(Vector(x_pos, y_pos, 0))
-    bolt_hole_shapes.append(translated_bolt_hole)
-
-bolt_holes_compound = Part.makeCompound(bolt_hole_shapes)
-
-final_flange_shape = flange_body.cut(bolt_holes_compound)
-
-obj = doc.addObject("Part::Feature", "Flange")
-obj.Shape = final_flange_shape
 doc.recompute()
 
 
