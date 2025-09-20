@@ -1,14 +1,15 @@
-import Part
 import FreeCAD as App
+import Part
+from FreeCAD import Vector
 
-doc = App.newDocument("CubeDoc")
+doc = App.newDocument("Cube")
 
-cube_size = 10.0
+side_length = 10.0
 
-cube_shape = Part.makeBox(cube_size, cube_size, cube_size)
+cube_shape = Part.makeBox(side_length, side_length, side_length)
 
-obj = doc.addObject("Part::Feature", "Cube_10mm")
-obj.Shape = cube_shape
+cube_obj = doc.addObject("Part::Feature", "Cube")
+cube_obj.Shape = cube_shape
 
 doc.recompute()
 
@@ -16,3 +17,10 @@ doc.recompute()
 import FreeCADGui
 FreeCADGui.activeDocument().activeView().viewAxometric()
 FreeCADGui.SendMsgToActiveView("ViewFit")
+
+import FreeCADGui
+import time
+time.sleep(5)  # allow GUI to load
+view = FreeCADGui.ActiveDocument.ActiveView
+view.saveImage(r'generated/screenshot.png', 480, 270, 'White')
+print("📸 Screenshot saved at generated/screenshot.png")
