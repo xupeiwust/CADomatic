@@ -1,7 +1,5 @@
-import os
 import uuid
 from pathlib import Path
-from dotenv import load_dotenv
 from huggingface_hub import hf_hub_download
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -9,11 +7,9 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import START, MessagesState, StateGraph
+from src.load_environment import load_env
 
-load_dotenv()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if not GEMINI_API_KEY:
-    raise ValueError("GEMINI_API_KEY missing in .env")
+GEMINI_API_KEY = load_env.GEMINI_API_KEY
 
 REPO_ID = "Yas1n/CADomatic_vectorstore"
 FILENAME_FAISS = "index.faiss"
@@ -33,7 +29,7 @@ vectorstore = FAISS.load_local(
 retriever = vectorstore.as_retriever(search_kwargs={"k": 15})
 
 workflow = StateGraph(state_schema=MessagesState)
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=1.2, api_key=GEMINI_API_KEY)
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.7, api_key=GEMINI_API_KEY)
 
 def call_model(state: MessagesState):
     """Generate FreeCAD Python code based on conversation state and RAG context."""
