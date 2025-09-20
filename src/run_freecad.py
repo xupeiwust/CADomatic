@@ -35,8 +35,6 @@ else:
 def open_freecad():
     freecad_exe = r"C:\Program Files\FreeCAD 1.0\bin\freecad.exe"
     script_path = Path("generated/result_script.py")
-    if not script_path.exists():
-        raise FileNotFoundError("Generated script not found. Run main.py first.")
 
     subprocess.Popen([freecad_exe, str(script_path)])
     print("Opened the part in FreeCAD GUI. Enjoy :)")

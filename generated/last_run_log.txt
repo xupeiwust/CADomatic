@@ -1,3 +1,0 @@
-
-Exception while processing file: generated/result_script.py [module 'FreeCADGui' has no attribute 'activeDocument']
-

@@ -76,7 +76,11 @@ def main():
 
         # Prepare prompt for LLM to fix the code
         fix_prompt = f"""
-The following FreeCAD script failed during execution:
+I want to make the following part using FreeCAD 1.0.1 python scripting
+
+{user_input}
+
+The following FreeCAD script was created but it failed during execution:
 
 {generated_code}
 
